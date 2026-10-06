@@ -1,0 +1,18 @@
+{
+  "name": "playwright-embedded-integrations",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node --env-file-if-exists=.env node_modules/@playwright/test/cli.js test",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.0.0",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22.9"
+  }
+}
