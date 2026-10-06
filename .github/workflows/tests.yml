@@ -1,0 +1,92 @@
+name: Tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar arquivos versionados
+        shell: bash
+        run: |
+          tracked=$(git ls-files --cached --ignored --exclude-standard)
+          if [ -n "$tracked" ]; then
+            printf 'Arquivos ignorados versionados:\n%s\n' "$tracked"
+            exit 1
+          fi
+      - run: cp .env.example .env
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - name: Executar testes
+        id: tests
+        run: npm test
+      - name: Resumo dos testes
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          REPORT_PATTERN: test-results/junit.xml
+          SUMMARY_FILE: test-results/summary.md
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          lines = ["## Resultados dos testes", "", f"Etapa de testes: **{os.environ['TEST_OUTCOME'] or 'não executada'}**.", ""]
+          reports = glob.glob(os.environ["REPORT_PATTERN"])
+          cases = []
+          invalid = []
+          failed = skipped = 0
+          if reports:
+              for report in reports:
+                  try:
+                      cases.extend(ET.parse(report).getroot().iter("testcase"))
+                  except (ET.ParseError, OSError):
+                      invalid.append(Path(report).name)
+              failed = sum(case.find("failure") is not None or case.find("error") is not None for case in cases)
+              skipped = sum(case.find("skipped") is not None for case in cases)
+              lines += ["| Registrados | Aprovados | Falhas/erros | Ignorados |", "| ---: | ---: | ---: | ---: |", f"| {len(cases)} | {len(cases) - failed - skipped} | {failed} | {skipped} |", ""]
+              if invalid:
+                  lines += ["Relatórios ilegíveis; contagem parcial: " + ", ".join(invalid), ""]
+              lines += ["Contagens extraídas dos relatórios disponíveis. Uma interrupção pode impedir o registro de todos os cenários.", ""]
+          else:
+              lines += ["Nenhum JUnit foi gerado; não é possível confirmar a execução dos cenários. Confira os logs das etapas anteriores.", ""]
+          lines += ["playwright-report/index.html, JUnit e evidências de falha. Retenção: 7 dias. Extraia o ZIP para consultar os arquivos."]
+          gate_passed = bool(cases) and not (invalid or failed or skipped) and os.environ["TEST_OUTCOME"] == "success"
+          lines += ["", "Gate: **aprovado**." if gate_passed else "Gate: **reprovado**. Todos os cenários devem executar e passar, com JUnit válido."]
+          summary_file = Path(os.environ["SUMMARY_FILE"])
+          summary_file.parent.mkdir(parents=True, exist_ok=True)
+          summary_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
+              output.write(summary_file.read_text(encoding="utf-8"))
+          raise SystemExit(0 if gate_passed else 1)
+          PY
+      - name: Publicar evidências
+        id: reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Link das evidências
+        if: always()
+        env:
+          ARTIFACT_URL: ${{ steps.reports.outputs.artifact-url }}
+        run: |
+          if [ -n "$ARTIFACT_URL" ]; then
+            printf '\n[Baixar evidências desta execução](%s)\n' "$ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '\nArtifact indisponível; confira a etapa de upload.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
