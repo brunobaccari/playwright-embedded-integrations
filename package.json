@@ -5,12 +5,15 @@
   "scripts": {
     "test": "node --env-file-if-exists=.env node_modules/@playwright/test/cli.js test",
     "typecheck": "tsc --noEmit",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "prepare": "husky",
+    "check:local": "git diff --cached --check && python scripts/summary.py --self-test && npm run typecheck"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@types/node": "24.0.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "husky": "9.1.7"
   },
   "engines": {
     "node": ">=22.9"
