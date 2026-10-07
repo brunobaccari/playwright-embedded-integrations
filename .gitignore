@@ -21,3 +21,5 @@ coverage/
 .cache/
 dist/
 playwright-report/
+__pycache__/
+*.py[cod]

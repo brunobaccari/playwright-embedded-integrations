@@ -53,3 +53,7 @@ The iframe form is a JavaScript counter without persistence or a backend transac
 - [Interactive document served by the site](https://testpages.eviltester.com/frame-includes/iframe-interactive.html)
 
 These are public practice environments. The suite uses one worker and a fresh session per scenario; it does not run load tests or modify other users' data.
+
+The Actions summary lists every scenario, duration, totals and blocking reason. The gate requires the count configured in the workflow, with no failures or skips; missing or invalid JUnit fails the gate. The summary is also included in the artifact.
+
+Final-state screenshots are also captured for passing UI tests and stored in artifacts, outside Git.

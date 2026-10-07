@@ -53,3 +53,7 @@ O formulário do iframe é um contador em JavaScript, sem persistência ou trans
 - [Documento interativo servido pelo site](https://testpages.eviltester.com/frame-includes/iframe-interactive.html)
 
 São ambientes públicos de prática. A suíte usa um worker e sessões novas por cenário; não executa carga nem altera dados de outras pessoas.
+
+O summary do Actions lista cada cenário, duração, totais e motivo de bloqueio. O gate exige a quantidade prevista no workflow, sem falhas ou skips; JUnit ausente ou inválido reprova. O resumo também acompanha o artifact.
+
+Screenshots do estado final também são capturados nos testes de interface aprovados e ficam nos artifacts, fora do Git.
